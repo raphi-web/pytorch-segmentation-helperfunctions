@@ -109,7 +109,7 @@ def train_folders(input_dir, target_dir):
 
 def train_val_split(inputs, targets, random_seed=42, train_size=0.8, shuffle=True):
 
-    dataset = zip(inputs, targets)
+    dataset = list(zip(inputs, targets))
 
     dataset_train, dataset_valid = train_test_split(
         dataset,
