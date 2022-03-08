@@ -8,12 +8,10 @@ import albumentations as A
 import rasterio
 from sklearn.model_selection import train_test_split
 
-
 import albumentations as A
 from rasterio.plot import reshape_as_image, reshape_as_raster
 
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 
 
 def augmentation():
@@ -37,8 +35,8 @@ class SegmentationDataSet(data.Dataset):
         self.inputs = inputs
         self.targets = targets
         self.augment = augment
-        self.inputs_dtype = torch.float32
-        self.targets_dtype = torch.long
+        self.inputs_dtype = torch.float
+        self.targets_dtype = torch.float
         self.nclasses = nclasses
 
         self.data_list = [i.split("/")[-1] for i in self.inputs]
@@ -85,13 +83,9 @@ class SegmentationDataSet(data.Dataset):
                 y = np.expand_dims(y, 0)
 
         # Typecasting
-        x, y = torch.from_numpy(x).type(
-            self.inputs_dtype), torch.from_numpy(y).type(self.targets_dtype)
-            
-        # --- For Crossentropy Dtype has to be cast as float! ---
-        # Dirty Fix !!!
-        x = x.float()
-        y = y.float()
+        x = torch.from_numpy(x).type(self.inputs_dtype)
+        y = torch.from_numpy(y).type(self.targets_dtype)
+
         return x, y
 
 
@@ -113,23 +107,23 @@ def train_folders(input_dir, target_dir):
     return input_img_paths, target_img_paths
 
 
-def train_val_split(inputs, targets, random_seed=42, train_size=0.8):
-    inputs_train, inputs_valid = train_test_split(
-        inputs,
-        random_state=random_seed,
-        train_size=train_size,
-        shuffle=True)
+def train_val_split(inputs, targets, random_seed=42, train_size=0.8, shuffle=True):
 
-    targets_train, targets_valid = train_test_split(
-        targets,
+    dataset = zip(inputs, targets)
+
+    dataset_train, dataset_valid = train_test_split(
+        dataset,
         random_state=random_seed,
         train_size=train_size,
-        shuffle=True)
+        shuffle=shuffle)
+
+    inputs_train, targets_train = zip(*dataset_train)
+    inputs_valid, targets_valid = zip(*dataset_valid)
 
     return inputs_train, inputs_valid, targets_train, targets_valid
 
 
-def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=False):
+def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=False, input_dtype=torch.float, target_dtype=torch.foat):
 
     inputs, targets = train_folders(input_dir, target_dir)
     inputs_train, inputs_valid, targets_train, targets_valid = train_val_split(
@@ -138,12 +132,16 @@ def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=Fals
     dataset_train = SegmentationDataSet(inputs=inputs_train,
                                         targets=targets_train,
                                         augment=augment,
-                                        nclasses=nclasses)
+                                        nclasses=nclasses,
+                                        input_dtype=input_dtype,
+                                        target_dtype=target_dtype)
 
     dataset_valid = SegmentationDataSet(inputs=inputs_valid,
                                         targets=targets_valid,
                                         augment=augment,
-                                        nclasses=nclasses)
+                                        nclasses=nclasses,
+                                        input_dtype=input_dtype,
+                                        target_dtype=target_dtype)
 
     dataloader_training = DataLoader(dataset_train,
                                      batch_size=batch_size,
@@ -156,13 +154,6 @@ def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=Fals
     return dataloader_training, dataloader_validation
 
 
-
-import numpy as np
-import rasterio
-import os
-
-
-
 def pad(rast, size):
     result = np.empty((rast.shape[0],) + size)
     for idx, band in enumerate(rast):
@@ -172,8 +163,9 @@ def pad(rast, size):
 
     return result
 
+
 def vrt_pad(src, tile_shape):
-    
+
     rast = src.read()
     _, rows, cols = rast.shape
     left, bottom, right, top = src.bounds
@@ -204,8 +196,6 @@ def vrt_pad(src, tile_shape):
     )
 
     return pad(rast, (new_rows, new_cols)), profile
-
-
 
 
 def padTileIterator(rast, func, tile_shape, output_channels=1, mean=False):
@@ -275,13 +265,11 @@ def padTileIterator(rast, func, tile_shape, output_channels=1, mean=False):
 
 def generate_classifier(model):
     def pred_func(x):
-        x = torch.unsqueeze(torch.from_numpy(x),0).to("cuda")
-        
+        x = torch.unsqueeze(torch.from_numpy(x), 0).to("cuda")
+
         y = model(x.float())
         y = np.array(y[0].cpu().detach())
-        y = np.argmax(y,0)
-        return np.expand_dims(y,0)
-    
+        y = np.argmax(y, 0)
+        return np.expand_dims(y, 0)
+
     return pred_func
-
-
