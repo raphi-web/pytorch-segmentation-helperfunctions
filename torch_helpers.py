@@ -81,7 +81,7 @@ class SegmentationDataSet(data.Dataset):
                 y = reshape_as_raster(y)
             else:
                 y = np.expand_dims(y, 0)
-
+        print(x.shape,y.shape)
         # Typecasting
         x = torch.from_numpy(x).type(self.inputs_dtype)
         y = torch.from_numpy(y).type(self.targets_dtype)
