@@ -123,7 +123,7 @@ def train_val_split(inputs, targets, random_seed=42, train_size=0.8, shuffle=Tru
     return inputs_train, inputs_valid, targets_train, targets_valid
 
 
-def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=False, input_dtype=torch.float32, target_dtype=torch.float):
+def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=False):
 
     inputs, targets = train_folders(input_dir, target_dir)
     inputs_train, inputs_valid, targets_train, targets_valid = train_val_split(
@@ -132,16 +132,12 @@ def gen_dataloader(input_dir, target_dir, nclasses=1, batch_size=2, augment=Fals
     dataset_train = SegmentationDataSet(inputs=inputs_train,
                                         targets=targets_train,
                                         augment=augment,
-                                        nclasses=nclasses,
-                                        input_dtype=input_dtype,
-                                        target_dtype=target_dtype)
+                                        nclasses=nclasses)
 
     dataset_valid = SegmentationDataSet(inputs=inputs_valid,
                                         targets=targets_valid,
                                         augment=augment,
-                                        nclasses=nclasses,
-                                        input_dtype=input_dtype,
-                                        target_dtype=target_dtype)
+                                        nclasses=nclasses)
 
     dataloader_training = DataLoader(dataset_train,
                                      batch_size=batch_size,
