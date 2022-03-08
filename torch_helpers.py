@@ -117,8 +117,8 @@ def train_val_split(inputs, targets, random_seed=42, train_size=0.8, shuffle=Tru
         train_size=train_size,
         shuffle=shuffle)
 
-    inputs_train, targets_train = zip(*dataset_train)
-    inputs_valid, targets_valid = zip(*dataset_valid)
+    inputs_train, targets_train = list(zip(*dataset_train))
+    inputs_valid, targets_valid = list(zip(*dataset_valid))
 
     return inputs_train, inputs_valid, targets_train, targets_valid
 
